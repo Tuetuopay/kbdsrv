@@ -222,7 +222,7 @@ const sock = new WebSocket(`ws://${window.location.host}/ws`);
 sock.addEventListener("open", event => {
 	console.log("ws connection established");
 
-	var buf = new Int8Array(2);
+	var buf = new Int8Array(3);
 
 	function on_key(event, is_down) {
 		if (event.defaultPrevented || event.repeat) return;
@@ -233,13 +233,28 @@ sock.addEventListener("open", event => {
 
 		console.log(`Keyboard Event: is_down=${is_down} key=${event.key} code=${event.code} at=${at_code}`);
 
-		buf[0] = at_code;
-		buf[1] = is_down ? 1 : 0;
+		buf[0] = 0;
+		buf[1] = at_code;
+		buf[2] = is_down ? 1 : 0;
+		sock.send(buf);
+	}
+
+	function on_mouse_move(event) {
+		const dx = event.movementX;
+		const dy = event.movementY;
+
+		buf[0] = 1;
+		buf[1] = dx;
+		buf[2] = dy;
 		sock.send(buf);
 	}
 
 	window.addEventListener("keydown", event => on_key(event, true), true);
 	window.addEventListener("keyup", event => on_key(event, false), true);
+	window.addEventListener("mousemove", on_mouse_move, true);
+
+	var body = document.getElementsByTagName("body")[0];
+	body.addEventListener("click", async () => await body.requestPointerLock());
 
 	console.log("handlers installed");
 });
