@@ -10,6 +10,7 @@ use axum::{
     routing::get,
     Router, Server,
 };
+use clap::Parser;
 use evdev::{
     uinput::{VirtualDevice, VirtualDeviceBuilder},
     AttributeSet, EventType, InputEvent, Key, RelativeAxisType,
@@ -22,8 +23,22 @@ struct VirtualDevices {
 }
 type Devs = Arc<Mutex<VirtualDevices>>;
 
+#[derive(Debug, Parser)]
+/// kbdsrv is a smol utility to forward you keyboard and mouse inputs through a browser to another
+/// computer.
+struct Kbdsrv {
+    /// Address to bind to
+    #[clap(long, default_value = "0.0.0.0:8080")]
+    bind: SocketAddr,
+    /// Root path to expose forwarder
+    #[clap(long, default_value = "/kbd")]
+    root: String,
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    let args = Kbdsrv::parse();
+
     let mut keys = AttributeSet::<Key>::new();
     // We want to forward the whole keyboard, so let's include all keys.
     for i in 0..0xffu16 {
@@ -51,13 +66,13 @@ async fn main() {
     let devs = Arc::new(Mutex::new(VirtualDevices { kbd, rat }));
 
     let app = Router::new()
-        .route("/kbd", get(get_kbd_html))
+        .route(&args.root, get(get_kbd_html))
         .route("/kbd.js", get(get_kbd_js))
         .route("/ws", get(ws_handler))
         .with_state(devs)
         .into_make_service_with_connect_info::<SocketAddr>();
 
-    let srv = Server::bind(&SocketAddr::from(([0u8; 4], 8080u16))).serve(app);
+    let srv = Server::bind(&args.bind).serve(app);
     println!("Listening on {}", srv.local_addr());
     srv.await.unwrap();
 }
