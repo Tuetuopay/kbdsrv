@@ -8,13 +8,13 @@ use axum::{
     http::header::CONTENT_TYPE,
     response::{Html, IntoResponse},
     routing::get,
-    Router, Server,
+    Router,
 };
 use clap::Parser;
 use evdev::{
     uinput::VirtualDevice, AttributeSet, EventType, InputEvent, KeyCode, RelativeAxisCode,
 };
-use tokio::sync::Mutex;
+use tokio::{net::TcpListener, sync::Mutex};
 
 struct VirtualDevices {
     kbd: VirtualDevice,
@@ -71,9 +71,9 @@ async fn main() {
         .with_state(devs)
         .into_make_service_with_connect_info::<SocketAddr>();
 
-    let srv = Server::bind(&args.bind).serve(app);
-    println!("Listening on {}", srv.local_addr());
-    srv.await.unwrap();
+    let listener = TcpListener::bind(args.bind).await.unwrap();
+    println!("Listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn get_kbd_html() -> impl IntoResponse {
