@@ -12,8 +12,7 @@ use axum::{
 };
 use clap::Parser;
 use evdev::{
-    uinput::{VirtualDevice, VirtualDeviceBuilder},
-    AttributeSet, EventType, InputEvent, Key, RelativeAxisType,
+    uinput::VirtualDevice, AttributeSet, EventType, InputEvent, KeyCode, RelativeAxisCode,
 };
 use tokio::sync::Mutex;
 
@@ -39,12 +38,12 @@ struct Kbdsrv {
 async fn main() {
     let args = Kbdsrv::parse();
 
-    let mut keys = AttributeSet::<Key>::new();
+    let mut keys = AttributeSet::<KeyCode>::new();
     // We want to forward the whole keyboard, so let's include all keys.
     for i in 0..0xffu16 {
-        keys.insert(Key(i));
+        keys.insert(KeyCode(i));
     }
-    let kbd = VirtualDeviceBuilder::new()
+    let kbd = VirtualDevice::builder()
         .unwrap()
         .name("kbdsrv virtual keyboard")
         .with_keys(&keys)
@@ -52,12 +51,12 @@ async fn main() {
         .build()
         .unwrap();
 
-    let rat = VirtualDeviceBuilder::new()
+    let rat = VirtualDevice::builder()
         .unwrap()
         .name("kbdsrv virtual mouse")
         .with_relative_axes(&AttributeSet::from_iter([
-            RelativeAxisType::REL_X,
-            RelativeAxisType::REL_Y,
+            RelativeAxisCode::REL_X,
+            RelativeAxisCode::REL_Y,
         ]))
         .unwrap()
         .build()
@@ -106,7 +105,7 @@ async fn handle_socket(mut socket: WebSocket, addr: SocketAddr, devs: Devs) {
                 let code = b[1];
                 let is_down = b[2] == 1;
 
-                let evt = InputEvent::new(EventType::KEY, code as u16, if is_down { 1 } else { 0 });
+                let evt = InputEvent::new(EventType::KEY.0, code.into(), is_down.into());
                 if let Err(e) = devs.lock().await.kbd.emit(&[evt]) {
                     println!("!!! Failed to send event: {e:?}");
                 }
@@ -116,8 +115,8 @@ async fn handle_socket(mut socket: WebSocket, addr: SocketAddr, devs: Devs) {
                 let dy = b[2] as i8;
 
                 let evts = [
-                    InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_X.0, dx as i32),
-                    InputEvent::new(EventType::RELATIVE, RelativeAxisType::REL_Y.0, dy as i32),
+                    InputEvent::new(EventType::RELATIVE.0, RelativeAxisCode::REL_X.0, dx as i32),
+                    InputEvent::new(EventType::RELATIVE.0, RelativeAxisCode::REL_Y.0, dy as i32),
                 ];
                 if let Err(e) = devs.lock().await.rat.emit(&evts) {
                     println!("!!! Failed to send events: {e:?}");

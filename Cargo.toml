@@ -7,4 +7,4 @@ edition = "2021"
 axum = { version = "0.6", features = ["ws"] }
 clap = { version = "4", default-features = false, features = ["derive", "help", "std", "usage"] }
 tokio = { version = "1", features = ["rt", "macros", "net", "fs"] }
-evdev = { version = "0.12", default-features = false, features = ["tokio"] }
+evdev = { version = "0.13", default-features = false, features = ["tokio"] }
