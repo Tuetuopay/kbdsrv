@@ -254,7 +254,10 @@ sock.addEventListener("open", event => {
 	window.addEventListener("mousemove", on_mouse_move, true);
 
 	var body = document.getElementsByTagName("body")[0];
-	body.addEventListener("click", async () => await body.requestPointerLock());
+	body.addEventListener("click", async () => {
+		window.focus();
+		await body.requestPointerLock();
+	});
 
 	console.log("handlers installed");
 });
